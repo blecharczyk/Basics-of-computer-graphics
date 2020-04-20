@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+  <link rel="stylesheet" href="/css/main.css" />
+</head>
+<body>
+  
+  <div class="viewport"></div>
+
+  <script src="three.min.js"></script>
+  <script src="physi.js"></script>
+  <script>
+    var container, scene, renderer, camera, light, ball, plane, plane1, plane2;
+    var WIDTH, HEIGHT, VIEW_ANGLE, ASPECT, NEAR, FAR;
+
+    var clock = new THREE.Clock();
+
+    Physijs.scripts.worker = 'physijs_worker.js';
+    Physijs.scripts.ammo = 'ammo.js';
+
+    container = document.querySelector('.viewport');
+
+    WIDTH = window.innerWidth,
+    HEIGHT = window.innerHeight;
+
+    VIEW_ANGLE = 45,
+    ASPECT = WIDTH / HEIGHT,
+    NEAR = 1,
+    FAR = 10000;
+
+    scene = new Physijs.Scene();
+    scene.setGravity(new THREE.Vector3( 0, -50, 0 ));
+    scene.addEventListener('update', function() {
+      scene.simulate(undefined, 2);
+    });
+
+    renderer = new THREE.WebGLRenderer({
+      antialias: true
+    });
+
+    renderer.setSize(WIDTH, HEIGHT);
+    renderer.shadowMapEnabled = true;
+    renderer.shadowMapSoft = true;
+    renderer.shadowMapType = THREE.PCFShadowMap;
+    renderer.shadowMapAutoUpdate = true;
+
+    container.appendChild(renderer.domElement);
+
+    camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
+
+    camera.position.set(0, 200, 500);
+    camera.lookAt(scene.position);
+    scene.add(camera);
+
+    light = new THREE.DirectionalLight(0xffffff);
+
+    light.position.set(0, 100, 60);
+    light.castShadow = true;
+    light.shadowCameraLeft = -60;
+    light.shadowCameraTop = -60;
+    light.shadowCameraRight = 60;
+    light.shadowCameraBottom = 60;
+    light.shadowCameraNear = 1;
+    light.shadowCameraFar = 1000;
+    light.shadowBias = -.0001
+    light.shadowMapWidth = light.shadowMapHeight = 1024;
+    light.shadowDarkness = .7;
+
+    scene.add(light);
+
+    plane = new Physijs.BoxMesh(
+      new THREE.CubeGeometry(80, 80, 2, 10, 10),
+      Physijs.createMaterial(
+        new THREE.MeshLambertMaterial({
+          color: 0xeeeeee
+        }),
+        .4,
+        .99
+      ),
+      0
+    );
+
+    plane.rotation.x = -Math.PI / 2;
+    plane.rotation.y = Math.PI / 24;
+    plane.position.set(0,100,0);
+    plane.receiveShadow = true;
+
+    //scene.add(plane);
+
+    plane1 = new Physijs.BoxMesh(
+      new THREE.CubeGeometry(100, 100, 2, 10, 10),
+      Physijs.createMaterial(
+        new THREE.MeshLambertMaterial({
+          color: 0xeeeeee
+        }),
+        .4,
+        .99
+      ),
+      0
+    );
+
+    plane1.rotation.x = -Math.PI / 2;
+    plane1.rotation.y = Math.PI / (-12);
+    plane1.position.set(75,50,0);
+    plane1.receiveShadow = true;
+
+    //scene.add(plane1);
+
+    plane2 = new Physijs.BoxMesh(
+      new THREE.CubeGeometry(100, 100, 2, 10, 10),
+      Physijs.createMaterial(
+        new THREE.MeshLambertMaterial({
+          color: 0xeeeeee
+        }),
+        .4,
+        .99
+      ),
+      0
+    );
+
+    plane2.rotation.x = -Math.PI / 2;
+    plane2.rotation.y = Math.PI / (12);
+    plane2.position.set(-75,50,0);
+    plane2.receiveShadow = true;
+
+    //scene.add(plane2);
+
+    setInterval(function() {
+      var flag = Math.random();
+      var colorr;
+      if(flag > 0.5){
+        colorr = 0x00ff00;
+      } else {
+        colorr = 0x0000ff;
+      }
+
+      ball = new Physijs.SphereMesh(
+        new THREE.SphereGeometry(
+          Math.random() * (4 - 1) + 1,
+          16,
+          16
+        ),
+        Physijs.createMaterial(
+          new THREE.MeshLambertMaterial({
+            color: colorr,
+            reflectivity: .8
+          }),
+          .4,
+          .99
+        ),
+        1
+      );
+
+      var r = {
+        x: Math.random() * (Math.PI - Math.PI / 12) + Math.PI / 12,
+        y: Math.random() * (Math.PI - Math.PI / 12) + Math.PI / 12,
+        z: Math.random() * (Math.PI - Math.PI / 12) + Math.PI / 12
+      };
+
+      ball.rotation.set(r.x, r.y, r.z);
+      ball.position.y = 140;
+      ball.castShadow = true;
+      ball.receiveShadow = true;
+
+      scene.add(ball);
+    }, 600);
+
+    function drawBox(xsize, ysize, posx, posy, posz) {
+      // box
+      var wall_up = new Physijs.BoxMesh(
+        new THREE.CubeGeometry(xsize, ysize, 2, 10, 10),
+        Physijs.createMaterial(
+          new THREE.MeshLambertMaterial({
+            color: 0xeeeeee
+          }),
+          .1,
+          .20
+        ),
+        0
+      );
+
+      var wall_down = new Physijs.BoxMesh(
+        new THREE.CubeGeometry(xsize, ysize, 2, 10, 10),
+        Physijs.createMaterial(
+          new THREE.MeshLambertMaterial({
+            color: 0xeeeeee
+          }),
+          .1,
+          .20
+        ),
+        0
+      );
+
+      var wall_right = new Physijs.BoxMesh(
+        new THREE.CubeGeometry(xsize, ysize, 2, 10, 10),
+        Physijs.createMaterial(
+          new THREE.MeshLambertMaterial({
+            color: 0xeeeeee
+          }),
+          .1,
+          .20
+        ),
+        0
+      );
+
+      var wall_left = new Physijs.BoxMesh(
+        new THREE.CubeGeometry(xsize, ysize, 2, 10, 10),
+        Physijs.createMaterial(
+          new THREE.MeshLambertMaterial({
+            color: 0xeeeeee
+          }),
+          .1,
+          .20
+        ),
+        0
+      );
+
+
+      var wall_floor = new Physijs.BoxMesh(
+        new THREE.CubeGeometry(xsize, xsize, 2, 10, 10),
+        Physijs.createMaterial(
+          new THREE.MeshLambertMaterial({
+            color: 0xeeeeee
+          }),
+          .1,
+          .20
+        ),
+        0
+      );
+      
+      wall_right.rotation.y = Math.PI/2;
+      wall_left.rotation.y = Math.PI/2;
+      wall_floor.rotation.x = Math.PI/2;
+
+      var x = posx, y = posy, z = posz;
+      wall_up.position.set(x,y,z);
+      wall_down.position.set(x, y, z+xsize-2);
+      wall_right.position.set(x-xsize/2+1,y,z+xsize/2-1);
+      wall_left.position.set(x+xsize/2-1, y, z+xsize/2-1);
+      wall_floor.position.set(x, y-3, z+xsize/2-1);
+
+      scene.add(wall_up);
+      scene.add(wall_down);
+      scene.add(wall_right);
+      scene.add(wall_left);
+      scene.add(wall_floor);
+    }
+
+    var step = 0;
+
+    drawBox(200, 20, 0, -100, -50);
+    drawBox(50, 20, 0, -35, -25);
+
+    render();
+
+
+    function render() {
+      for (var i = 5; i < scene.children.length - 5; i++) {
+        var obj = scene.children[i];
+
+        //if (obj.position.y <= -50) {
+        //  scene.remove(obj);
+        //}
+      }
+      
+      step++;
+      plane.rotation.y = Math.sin(step/300)/6 * Math.PI;
+      plane.rotation.z = Math.cos(step/300)/6 * Math.PI;
+      scene.simulate();
+      scene.add(plane);
+      scene.add(plane1);
+      scene.add(plane2);
+      renderer.render(scene, camera);
+      requestAnimationFrame(render);
+    }
+  </script>
+</body>
+</html>

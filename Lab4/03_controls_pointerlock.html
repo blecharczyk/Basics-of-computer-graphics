@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Lab03-05 - pointerlock controls</title>
+		<style>
+			html, body {
+				width: 100%;
+				height: 100%;
+			}
+
+			body {
+				background-color: #ffffff;
+				margin: 0;
+				overflow: hidden;
+				font-family: arial;
+			}
+
+			#blocker {
+
+				position: absolute;
+
+				width: 100%;
+				height: 100%;
+
+				background-color: rgba(0,0,0,0.5);
+
+			}
+
+			#instructions {
+
+				width: 100%;
+				height: 100%;
+
+				display: -webkit-box;
+				display: -moz-box;
+				display: box;
+
+				-webkit-box-orient: horizontal;
+				-moz-box-orient: horizontal;
+				box-orient: horizontal;
+
+				-webkit-box-pack: center;
+				-moz-box-pack: center;
+				box-pack: center;
+
+				-webkit-box-align: center;
+				-moz-box-align: center;
+				box-align: center;
+
+				color: #ffffff;
+				text-align: center;
+
+				cursor: pointer;
+
+			}
+
+		</style>
+	</head>
+	<body>
+		<script src="three.js"></script>
+		<script src="PointerLockControls.js"></script>
+
+		<div id="blocker">
+
+			<div id="instructions">
+				<span style="font-size:40px">Click to play</span>
+				<br />
+				(W, A, S, D = Move, SPACE = Jump, MOUSE = Look around)
+			</div>
+
+		</div>
+
+		<script>
+
+			var camera, scene, renderer;
+			var geometry, material, mesh;
+			var controls,time = Date.now();
+
+			var objects = [];
+
+			var ray;
+
+			var lions = [];
+			var elephants = [];
+			var zebras = [];
+			var trees = [];
+
+	
+			var instructions = document.getElementById( 'instructions' );
+
+			// http://www.html5rocks.com/en/tutorials/pointerlock/intro/
+
+			var havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
+
+			if ( havePointerLock ) {
+
+				var element = document.body;
+
+				var pointerlockchange = function ( event ) {
+
+					if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
+
+						controls.enabled = true;
+
+
+					} else {
+
+						controls.enabled = false;
+
+						instructions.style.display = '';
+
+					}
+
+				}
+
+				var pointerlockerror = function ( event ) {
+
+					instructions.style.display = '';
+
+				}
+
+				// Hook pointer lock state change events
+				document.addEventListener( 'pointerlockchange', pointerlockchange, false );
+				document.addEventListener( 'mozpointerlockchange', pointerlockchange, false );
+				document.addEventListener( 'webkitpointerlockchange', pointerlockchange, false );
+
+				document.addEventListener( 'pointerlockerror', pointerlockerror, false );
+				document.addEventListener( 'mozpointerlockerror', pointerlockerror, false );
+				document.addEventListener( 'webkitpointerlockerror', pointerlockerror, false );
+
+				instructions.addEventListener( 'click', function ( event ) {
+
+					instructions.style.display = 'none';
+
+					// Ask the browser to lock the pointer
+					element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
+
+					if ( /Firefox/i.test( navigator.userAgent ) ) {
+
+						var fullscreenchange = function ( event ) {
+
+							if ( document.fullscreenElement === element || document.mozFullscreenElement === element || document.mozFullScreenElement === element ) {
+
+								document.removeEventListener( 'fullscreenchange', fullscreenchange );
+								document.removeEventListener( 'mozfullscreenchange', fullscreenchange );
+
+								element.requestPointerLock();
+							}
+
+						}
+
+						document.addEventListener( 'fullscreenchange', fullscreenchange, false );
+						document.addEventListener( 'mozfullscreenchange', fullscreenchange, false );
+
+						element.requestFullscreen = element.requestFullscreen || element.mozRequestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen;
+
+						element.requestFullscreen();
+
+					} else {
+
+						element.requestPointerLock();
+
+					}
+
+				}, false );
+
+			} else {
+
+				instructions.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
+
+			}
+
+			init();
+			animate();
+
+			function init() {
+
+				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 5000 );
+
+				scene = new THREE.Scene();
+				//scene.fog = new THREE.Fog( 0xffffff, 0, 750 );
+
+				var light = new THREE.DirectionalLight( 0xffffff, 1.5 );
+				light.position.set( 1, 1, 1 );
+				scene.add( light );
+
+				var light = new THREE.DirectionalLight( 0xffffff, 0.75 );
+				light.position.set( -1, - 0.5, -1 );
+				scene.add( light );
+
+				controls = new THREE.PointerLockControls( camera );
+				scene.add( controls.getObject() );
+
+				ray = new THREE.Raycaster();
+				ray.ray.direction.set( 0, -1, 0 );
+
+				//light
+				var light = new THREE.PointLight(0xffffff);
+				light.position.set(0,170,0);
+				scene.add(light);
+
+				// floor
+
+				var cubeGeom = new THREE.CubeGeometry(500, 300, 30,1,1,1);
+				for (let i = 0; i < 100; i++) {
+
+				}
+
+				//
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setClearColor( 0xffffff );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				document.body.appendChild( renderer.domElement );
+
+				//
+				drawSkybox();
+				drawGrass();
+				drawLions();
+				drawElephants();
+				drawZebras();
+				drawTrees();
+				drawCharacter();
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+
+			function drawSkybox() {
+				var skyBoxArray = [];
+				skyBoxArray.push(new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture( 'textures/barren_ft.jpg' ) }));
+				skyBoxArray.push(new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture( 'textures/barren_bk.jpg' ) }));
+				skyBoxArray.push(new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture( 'textures/barren_up.jpg' ) }));
+				skyBoxArray.push(new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture( 'textures/barren_dn.jpg' ) }));
+				skyBoxArray.push(new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture( 'textures/barren_rt.jpg' ) }));
+				skyBoxArray.push(new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture( 'textures/barren_lf.jpg' ) }));
+				for (var i = 0; i < 6; i++) {
+					skyBoxArray[i].side = THREE.BackSide;
+				}
+				var skyboxMaterial = new THREE.MeshFaceMaterial( skyBoxArray );
+				var skyboxGeom = new THREE.BoxGeometry( 5000, 5000, 5000, 64, 64, 64 );
+				var skybox = new THREE.Mesh( skyboxGeom, skyboxMaterial );
+				scene.add( skybox );
+			}
+
+			function drawGrass() {
+				var grassTexture = THREE.ImageUtils.loadTexture("textures/grass.jpg");
+				var grassBump = THREE.ImageUtils.loadTexture("textures/grass-cover-normal.jpg");
+				var geometry = new THREE.PlaneGeometry( 1500, 1500, 1, 1 );
+				grassTexture.repeat.set( 4, 50 );
+				grassTexture.wrapS = grassTexture.wrapT = THREE.RepeatWrapping; 
+				grassBump.repeat.set( 3, 50 );
+				grassBump.wrapS = grassBump.wrapT = THREE.RepeatWrapping; 
+				var material = new THREE.MeshPhongMaterial( { map:grassTexture, bumpMap:grassBump } );
+
+				var floor = new THREE.Mesh( geometry, material );
+				floor.position.set(0, -10, 0);
+				floor.rotation.x = -Math.PI/2;
+				scene.add( floor );
+			}
+
+			function drawLions() {
+				var lionGeo = new THREE.PlaneGeometry(20, 45);
+				var lionTexture = THREE.ImageUtils.loadTexture("textures/lion.png");
+				var lionMaterial = new THREE.MeshBasicMaterial({map: lionTexture, side:THREE.DoubleSide, transparent:true });
+				for (let i = 0; i < 10; i++) {
+						var lion = new THREE.Mesh(lionGeo, lionMaterial);
+						lion.position.set(Math.random()*1500 - 750, 15, Math.random()*1500 - 750);
+						lions.push(lion);
+						scene.add(lion);
+				}
+				console.log(lions.length);
+			}
+
+			function drawElephants() {
+				var elephantGeo = new THREE.PlaneGeometry(45, 50);
+				var elephantTexture = THREE.ImageUtils.loadTexture("textures/elephant1.png");
+				var elephantMaterial = new THREE.MeshBasicMaterial({map: elephantTexture, side:THREE.DoubleSide, transparent:true });
+				for (let i = 0; i < 10; i++) {
+						var elephant = new THREE.Mesh(elephantGeo, elephantMaterial);
+						elephant.position.set(Math.random()*1500 - 750, 15, Math.random()*1500 - 750);
+						elephants.push(elephant);
+						scene.add(elephant);
+				}
+				console.log(elephant.length);
+			}
+
+			function drawZebras() {
+				var zebraGeo = new THREE.PlaneGeometry(40, 20);
+				var zebraTexture = THREE.ImageUtils.loadTexture("textures/zebra.png");
+				var zebraMaterial = new THREE.MeshBasicMaterial({map: zebraTexture, side:THREE.DoubleSide, transparent:true });
+				for (let i = 0; i < 10; i++) {
+						var zebra = new THREE.Mesh(zebraGeo, zebraMaterial);
+						zebra.position.set(Math.random()*1500 - 750, 0, Math.random()*1500 - 750);
+						zebras.push(zebra);
+						scene.add(zebra);
+				}
+				console.log(zebras.length);
+			}
+
+			function drawTrees() {
+				var treeGeo = new THREE.PlaneGeometry(90, 230);
+				var treeTexture = THREE.ImageUtils.loadTexture("textures/tree.png");
+				var treeMaterial = new THREE.MeshBasicMaterial({map: treeTexture, side:THREE.DoubleSide, transparent:true });
+				for (let i = 0; i < 10; i++) {
+						var tree = new THREE.Mesh(treeGeo, treeMaterial);
+						tree.position.set(Math.random()*1500 - 750, 70, Math.random()*1500 - 750);
+						trees.push(tree);
+						scene.add(tree);
+				}
+				console.log(trees.length);
+			}
+
+
+			function drawCharacter() {
+				var weapGeo = new THREE.PlaneGeometry(3,2, 2, 2);
+				var weaponTexture = THREE.ImageUtils.loadTexture("textures/bow3.png");
+				var weapMaterial = new THREE.MeshBasicMaterial({map: weaponTexture, side:THREE.DoubleSide, transparent:true});
+				var weapon = new THREE.Mesh(weapGeo, weapMaterial);
+				weapon.position.set(2.5, -1.5, -3);
+				camera.add(weapon);
+
+				var sightsGeo = new THREE.PlaneGeometry(0.1, 0.1, 1, 1);
+				var sightsTexture = THREE.ImageUtils.loadTexture("textures/target3.png");
+				var sightsMaterial = new THREE.MeshBasicMaterial({map: sightsTexture, side:THREE.DoubleSide, transparent:true});
+				var sights = new THREE.Mesh(sightsGeo, sightsMaterial);
+				sights.position.set(0, 0, -1);
+				camera.add(sights);
+			}
+
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			var a = 0, b=0, c=0, d=0;
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				//
+
+				controls.isOnObject( false );
+
+				ray.ray.origin.copy( controls.getObject().position );
+				ray.ray.origin.y -= 10;
+
+				var intersections = ray.intersectObjects( objects );
+
+				if ( intersections.length > 0 ) {
+
+					var distance = intersections[ 0 ].distance;
+
+					if ( distance > 0 && distance < 10 ) {
+
+						controls.isOnObject( true );
+
+					}
+
+				}
+
+				controls.update( Date.now() - time );
+
+				if (a == 5) {
+					a = 0;
+					for (var lion in lions) {
+							let x = lions[lion].position.x;
+							let dx = Math.random() - 0.5;
+							if (dx + x > 750 || dx + x < -750) {
+							} else {
+								lions[lion].position.x += dx;
+							}
+							lions[lion].position.z += dx;
+							}
+				} else {
+						a++;
+				}
+
+				if (b == 5) {
+					b = 0;
+					for (var elephant in elephants) {
+							let x = elephants[elephant].position.x;
+							let dx = Math.random() - 0.5;
+							if (dx + x > 750 || dx + x < -750) {
+							} else {
+								elephants[elephant].position.x += dx;
+							}
+							elephants[elephant].position.z += dx;
+							}
+				} else {
+						b++;
+				}
+
+				if (c == 5) {
+					c = 0;
+					for (var zebra in zebras) {
+							let x = zebras[zebra].position.x;
+							let dx = Math.random() - 0.5;
+							if (dx + x > 750 || dx + x < -750) {
+							} else {
+								zebras[zebra].position.x += dx;
+							}
+							zebras[zebra].position.z += dx;
+							}
+				} else {
+						c++;
+				}
+
+				if (d == 5) {
+					d = 0;
+					for (var tree in trees) {
+							let x = trees[tree].position.x;
+							let dx = Math.random() - 0.5;
+							if (dx + x > 750 || dx + x < -750) {
+							} else {
+								trees[tree].position.x += dx;
+							}
+							trees[tree].position.z += dx;
+							}
+				} else {
+						d++;
+				}
+
+				renderer.render( scene, camera );
+				time = Date.now();
+			}
+
+		</script>
+	</body>
+</html>
